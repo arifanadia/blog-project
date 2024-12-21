@@ -2,6 +2,8 @@ import { model, Schema } from 'mongoose';
 import { TUser } from './user.interface';
 import config from '../../config';
 import bcrypt from 'bcrypt';
+import { StatusCodes } from 'http-status-codes';
+import AppError from '../../errors/AppError';
 const userSchema = new Schema<TUser>(
   {
     name: {
@@ -40,15 +42,18 @@ const userSchema = new Schema<TUser>(
 userSchema.pre('save', async function (next) {
   const user = this;
 
+  const existingUser = await User.findOne({ email: user.email });
+  if (existingUser) {
+    throw new AppError(StatusCodes.BAD_REQUEST,'A user with this email already exists.');
+  }
 
-    // Hash the password
-    user.password = await bcrypt.hash(
-      user.password,
-      Number(config.bcrypt_salt_rounds)
-    );
-    next();
-  } 
-);
+  // Hash the password
+  user.password = await bcrypt.hash(
+    user.password,
+    Number(config.bcrypt_salt_rounds),
+  );
+  next();
+});
 
 // set " " after saving password
 userSchema.post('save', function (doc, next) {
