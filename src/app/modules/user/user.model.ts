@@ -14,6 +14,12 @@ const userSchema = new Schema<TUser>(
       type: String,
       required: [true, 'Email is required.'],
       unique: true,
+      validate: {
+        validator: function (value: string) {
+          return /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(value)
+        },
+        message: '{VALUE} is not a valid email',
+      },
     },
     password: {
       type: String,
@@ -23,9 +29,10 @@ const userSchema = new Schema<TUser>(
       type: String,
       enum: {
         values: ['admin', 'user'],
-        message: 'Role must be either "admin" or "user".',
+        message: '{VALUE} is not valid, please provide a valid role',
       },
       default: 'user',
+      required: true,
     },
     isBlocked: {
       type: Boolean,
@@ -37,14 +44,16 @@ const userSchema = new Schema<TUser>(
   },
 );
 
-
 // Pre-save middleware for hashing the password
 userSchema.pre('save', async function (next) {
   const user = this;
 
   const existingUser = await User.findOne({ email: user.email });
   if (existingUser) {
-    throw new AppError(StatusCodes.BAD_REQUEST,'A user with this email already exists.');
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      'A user with this email already exists.',
+    );
   }
 
   // Hash the password
