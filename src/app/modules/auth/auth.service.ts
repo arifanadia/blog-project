@@ -7,7 +7,6 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import config from '../../config';
 
-
 const register = async (payload: TUser) => {
   const result = await User.create(payload);
   return result;
@@ -34,14 +33,16 @@ const login = async (payload: TLoginUser) => {
     throw new AppError(StatusCodes.UNAUTHORIZED, 'Password did not match');
   }
 
+  const jwtPayload = {
+    id: user._id,
+    role: user.role,
+  };
   const token = jwt.sign(
-    {
-      id: user.email,
-      role: user.role, // Assuming the user has a `role` field, adjust based on your schema
-    },
-    config.jwt_secret as string, // Replace with your secret key
-    { expiresIn: '10d' }, // Token expiration time, can be adjusted as needed
+    jwtPayload,
+    config.jwt_secret as string, 
+    { expiresIn: '10d' },
   );
+  
   return { token, user };
 };
 export const AuthServices = {
