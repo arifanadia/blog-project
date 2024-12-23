@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { BlogServices } from './blog.service';
-import { Blog } from './blog.model';
+
 
 const createBlog = catchAsync(async (req, res) => {
   const { title, content } = req.body;
@@ -25,7 +25,8 @@ const createBlog = catchAsync(async (req, res) => {
 const updateBlog = catchAsync(async (req, res) => {
   const id = req.params.id;
   const body = req.body;
-  const blog = await BlogServices.updateBlog(id, body);
+  const userId = req.user.id; 
+  const blog = await BlogServices.updateBlog(id, body,userId);
 
   sendResponse(res, {
     success: true,
@@ -50,7 +51,6 @@ const deleteBlog = catchAsync(async (req, res) => {
 
 const getAllBlog = catchAsync(async(req,res) => {
     const result  = await BlogServices.getAllBlog(req.query)
-    console.log(result);
     sendResponse(res, {
         success: true,
         message: 'Blogs fetched successfully',

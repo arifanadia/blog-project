@@ -1,13 +1,32 @@
+import { StatusCodes } from 'http-status-codes';
 import QueryBuilder from '../../builders/queryBuilder';
+import AppError from '../../errors/AppError';
 import { TBlog } from './blog.interface';
 import { Blog } from './blog.model';
 
 const createBlog = async (payload: TBlog) => {
-  const result = (await Blog.create(payload)).populate('author', 'name email');
+  const blog = await Blog.create(payload);
+  const result = await Blog.findById(blog._id).populate('author', 'name email');
   return result;
 };
 
-const updateBlog = async (id: string, payload: Partial<TBlog>) => {
+const updateBlog = async (
+  id: string,
+  payload: Partial<TBlog>,
+  userId: string,
+) => {
+  const blog = await Blog.findById(id);
+
+  if (!blog) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Blog not found');
+  }
+  if (blog.author.toString() !== userId) {
+    throw new AppError(
+      StatusCodes.FORBIDDEN,
+      'You are not authorized to update this blog',
+    );
+  }
+
   const result = await Blog.findByIdAndUpdate(id, payload).populate(
     'author',
     'name email',
@@ -15,6 +34,19 @@ const updateBlog = async (id: string, payload: Partial<TBlog>) => {
   return result;
 };
 const deleteBlog = async (id: string, userId: string) => {
+  const blog = await Blog.findById(id);
+
+  if (!blog) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Blog not found');
+  }
+
+  if (blog.author.toString() !== userId) {
+    throw new AppError(
+      StatusCodes.FORBIDDEN,
+      'You are not authorized to delete this blog',
+    );
+  }
+  
   const result = await Blog.findOneAndDelete({
     _id: id,
     author: userId,
@@ -24,27 +56,16 @@ const deleteBlog = async (id: string, userId: string) => {
 };
 
 const getAllBlog = async (query: Record<string, unknown>) => {
-    // Fallback to defaults if no query parameters provided
-    const searchableFields = ['title', 'content'];
-    const blogQuery = new QueryBuilder(Blog.find(), query)
-      .search(searchableFields)
-      .filter()
-      .sort();
-  
-    // Execute the query and return the result
-    try {
-      const result = await blogQuery.modelQuery;
-      console.log('Executing Query:', blogQuery.modelQuery.getQuery());
-      return result;
-    } catch (error) {
-      console.error("Error executing query:", error);
-      throw new Error('An error occurred while fetching the blogs.');
-    }
-    
+  // Fallback to defaults if no query parameters provided
+  const searchableFields = ['title', 'content'];
+  const blogQuery = new QueryBuilder(Blog.find(), query)
+    .search(searchableFields)
+    .filter()
+    .sort();
 
-  };
-  
-  
+  const result = await blogQuery.modelQuery;
+  return result;
+};
 
 export const BlogServices = {
   createBlog,
