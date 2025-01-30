@@ -4,7 +4,6 @@ import validateRequest from '../../middlewares/validateRequest';
 import { UserValidations } from '../user/user.validation';
 import { AuthValidations } from './auth.validation';
 
-
 const router = express.Router();
 
 router.post(

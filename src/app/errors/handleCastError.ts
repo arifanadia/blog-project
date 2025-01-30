@@ -17,7 +17,5 @@ const handleCastError = (
     message: 'Invalid Id',
     errorSources,
   };
-
- 
 };
 export default handleCastError;

@@ -27,10 +27,9 @@ const updateBlog = async (
     );
   }
 
-  const result = await Blog.findByIdAndUpdate(id, payload).populate(
-    'author',
-    'name email',
-  );
+  const result = await Blog.findByIdAndUpdate(id, payload, {
+    new: true,
+  }).populate('author', 'name email');
   return result;
 };
 const deleteBlog = async (id: string, userId: string) => {
@@ -46,7 +45,7 @@ const deleteBlog = async (id: string, userId: string) => {
       'You are not authorized to delete this blog',
     );
   }
-  
+
   const result = await Blog.findOneAndDelete({
     _id: id,
     author: userId,
@@ -58,12 +57,26 @@ const deleteBlog = async (id: string, userId: string) => {
 const getAllBlog = async (query: Record<string, unknown>) => {
   // Fallback to defaults if no query parameters provided
   const searchableFields = ['title', 'content'];
+
   const blogQuery = new QueryBuilder(Blog.find(), query)
     .search(searchableFields)
     .filter()
     .sort();
 
   const result = await blogQuery.modelQuery;
+  // Handle case when no results are found
+  if (result.length === 0) {
+    if (query.filter) {
+      throw new AppError(
+        StatusCodes.NOT_FOUND,
+        'No blogs found for the specified author.',
+      );
+    }
+    throw new AppError(
+      StatusCodes.NOT_FOUND,
+      'No blogs found matching the search criteria.',
+    );
+  }
   return result;
 };
 

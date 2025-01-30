@@ -8,24 +8,32 @@ import { TUserRole } from '../modules/user/user.interface';
 
 const auth = (...requiredRoles: TUserRole[]) => {
   return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
 
-    const token = req.headers.authorization;
-
-    if (!token) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new AppError(StatusCodes.FORBIDDEN, 'You are not authorized!');
     }
 
-    jwt.verify(token, config.jwt_secret as string, function (err, decoded) {
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, config.jwt_secret as string, (err, decoded) => {
       if (err) {
-        throw new AppError(StatusCodes.FORBIDDEN, 'You are not authorized!');
+        return next(
+          new AppError(StatusCodes.FORBIDDEN, 'Invalid or expired token!'),
+        );
       }
-      const role = (decoded as JwtPayload).role;
-      if (requiredRoles && !requiredRoles.includes(role)) {
-        throw new AppError(StatusCodes.FORBIDDEN, 'You are not authorized!');
+
+      const userRole = (decoded as JwtPayload).role;
+      if (requiredRoles.length > 0 && !requiredRoles.includes(userRole)) {
+        return next(
+          new AppError(StatusCodes.FORBIDDEN, 'You do not have permission!'),
+        );
       }
+
       req.user = decoded as JwtPayload;
+      next();
     });
-    next();
   });
 };
+
 export default auth;

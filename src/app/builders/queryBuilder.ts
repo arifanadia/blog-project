@@ -1,4 +1,4 @@
-import { FilterQuery, Query } from 'mongoose';
+import mongoose, { FilterQuery, Query } from 'mongoose';
 
 class QueryBuilder<T> {
   public modelQuery: Query<T[], T>;
@@ -14,7 +14,6 @@ class QueryBuilder<T> {
       ? String(this?.query?.search).trim()
       : '';
 
-    // Only apply search if there's a valid search term
     if (search) {
       this.modelQuery = this.modelQuery.find({
         $or: searchableFields.map((field: string) => ({
@@ -34,6 +33,21 @@ class QueryBuilder<T> {
 
     excludeFields.forEach((el) => delete queryObj[el]);
 
+    if (queryObj.filter) {
+      const authorId = queryObj.filter;
+
+      // Check if the provided filter is a valid ObjectId
+      if (
+        typeof authorId === 'string' &&
+        mongoose.Types.ObjectId.isValid(authorId)
+      ) {
+        queryObj.author = new mongoose.Types.ObjectId(authorId);
+        delete queryObj.filter; // Remove filter to prevent conflicts
+      } else {
+        throw new Error('Invalid authorId format');
+      }
+    }
+
     // Apply filters only if the query object is not empty
     if (Object.keys(queryObj).length > 0) {
       this.modelQuery = this.modelQuery.find(queryObj as FilterQuery<T>);
@@ -43,8 +57,8 @@ class QueryBuilder<T> {
   }
 
   sort() {
-    const sortBy = this?.query?.sort || 'createdAt';
-    const sortOrder = this?.query?.sortOrder || 'desc';
+    const sortBy = this?.query?.sortBy || 'createdAt'; // Sort by createdAt by default
+    const sortOrder = this?.query?.sortOrder || 'desc'; // Default to descending order
     const sortStr = `${sortOrder === 'desc' ? '-' : ''}${sortBy}`;
 
     this.modelQuery = this.modelQuery.sort(sortStr);
